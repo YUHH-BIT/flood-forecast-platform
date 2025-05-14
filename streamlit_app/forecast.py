@@ -50,8 +50,6 @@ def run_forecast_module():
     # 用户输入模型参数
     st.sidebar.header("模型参数配置")
     input_size = st.sidebar.number_input("输入特征数 (input_size)", min_value=1, value=4)
-    hidden_size = st.sidebar.number_input("隐藏层大小 (hidden_size)", min_value=1, value=64)
-    num_layers = st.sidebar.number_input("LSTM 层数 (num_layers)", min_value=1, value=1)
     input_seq_len = st.sidebar.number_input("输入时间步长 (input_seq_len)", min_value=1, value=12)  # 默认 12 个月
     output_seq_len = st.sidebar.number_input("输出时间步长 (output_seq_len)", min_value=1, value=1)  # 默认 1 个月
 
@@ -78,7 +76,7 @@ def run_forecast_module():
             st.error(f"❌ 数据格式有误：{e}")
             return
     else:
-        uploaded_file = st.file_uploader("📤 上传 Excel 或 CSV 文件（需包含: date, evaporation_from_bare_soil_sum, total_precipitation_sum, temperature_2m_max, wind_speed_10m 列）", type=["csv", "xlsx"])
+        uploaded_file = st.file_uploader("📤 上传 Excel 或 CSV 文件（需包含: date, evaporation_from_bare_soil_sum, total_precipitation_sum, temperature_2m_max, wind_speed_10m 列）")
         if uploaded_file:
             try:
                 if uploaded_file.name.endswith(".csv"):
@@ -106,7 +104,7 @@ def run_forecast_module():
         features_tensor = torch.tensor(features[-input_seq_len:]).unsqueeze(0)  # (1, seq_len, input_size)
 
         # 动态加载模型
-        model = load_model(input_size, hidden_size, num_layers)
+        model = load_model(input_size, hidden_size=64, num_layers=1)  # 固定 hidden_size 和 num_layers
 
         # 执行预测
         prediction = make_forecast(model, features_tensor)
