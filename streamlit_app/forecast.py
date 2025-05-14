@@ -50,10 +50,11 @@ def load_model():
 def normalize_input(data):
     return (data - data.mean()) / (data.std() + 1e-8)
 
-# Streamlit 页面
-def run_direct_forecast():
-    st.title("📈 多步径流预测（滑动窗口）")
-    st.write(f"基于最近 {HISTORY_DAYS} 天气象数据，预测未来 {FORECAST_DAYS} 天径流值。")
+# Streamlit 主界面
+def run_forecast_module():
+    st.title("🌧️ 洪水预报模块")
+    st.write("上传最新气象数据（Excel 或 CSV），进行未来月径流预测。")
+
 
     # 手动输入 or 文件上传
     manual_input = st.checkbox("手动输入数据")
