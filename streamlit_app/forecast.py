@@ -45,7 +45,10 @@ def make_forecast(model, input_tensor):
     input_tensor = input_tensor.to(DEVICE)
     with torch.no_grad():
         prediction = model(input_tensor)
-    return prediction.cpu().numpy()
+    prediction = prediction.cpu().numpy()
+    # 将负数替换为零
+    prediction[prediction < 0] = 0
+    return prediction
 
 # Streamlit 主界面
 def run_forecast_module():
