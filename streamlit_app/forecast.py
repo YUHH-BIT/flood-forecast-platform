@@ -28,12 +28,13 @@ class LSTMModel(nn.Module):
 
 # 载入模型
 @st.cache_resource
-def load_model(input_size, hidden_size, num_layers):
-    model = LSTMModel(input_size=input_size, hidden_size=hidden_size, num_layers=num_layers)
+def load_model(input_size):
+    model = LSTMModel(input_size=input_size, hidden_size1=80, hidden_size2=240)
     model.load_state_dict(torch.load(MODEL_PATH, map_location=DEVICE))
     model.to(DEVICE)
     model.eval()
     return model
+
 
 # 数据标准化
 def normalize_input(data):
