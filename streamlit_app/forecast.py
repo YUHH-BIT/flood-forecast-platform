@@ -93,19 +93,17 @@ def run_forecast_module():
             st.warning("请上传数据文件或切换到手动输入模式。")
             return
 
-# 数据检查和处理
-try:
-    # 修改后的必需列
-    required_columns = ['date', 'evaporation_from_bare_soil_sum', 'total_precipitation_sum', 'temperature_2m_max', 'wind_speed_10m']
-    if not set(required_columns).issubset(df.columns):
-        missing_cols = set(required_columns) - set(df.columns)
-        st.error(f"❌ 缺少所需列：{missing_cols}")
-        return
+    # 数据检查和处理
+    try:
+        # 修改后的必需列
+        required_columns = ['date', 'evaporation_from_bare_soil_sum', 'total_precipitation_sum', 'temperature_2m_max', 'wind_speed_10m']
+        if not set(required_columns).issubset(df.columns):
+            missing_cols = set(required_columns) - set(df.columns)
+            st.error(f"❌ 缺少所需列：{missing_cols}")
+            return
 
-    features = normalize_input(features)
-    features_tensor = torch.tensor(features[-input_seq_len:]).unsqueeze(0)  # (1, seq_len, input_size)
-
-
+        features = normalize_input(features)
+        features_tensor = torch.tensor(features[-input_seq_len:]).unsqueeze(0)  # (1, seq_len, input_size)
 
         # 动态加载模型
         model = load_model(input_size, hidden_size, num_layers)
