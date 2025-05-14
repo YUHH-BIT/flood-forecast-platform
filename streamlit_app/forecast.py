@@ -93,27 +93,34 @@ def run_forecast_module():
             st.warning("请上传数据文件或切换到手动输入模式。")
             return
 
-    # 数据检查和处理
-    try:
-        # 修改后的必需列
-        required_columns = ['date', 'evaporation_from_bare_soil_sum', 'total_precipitation_sum', 'temperature_2m_max', 'wind_speed_10m']
-        if not set(required_columns).issubset(df.columns):
-            missing_cols = set(required_columns) - set(df.columns)
-            st.error(f"❌ 缺少所需列：{missing_cols}")
-            return
+# 数据检查和处理
+try:
+    # 必需列
+    required_columns = ['date', 'evaporation_from_bare_soil_sum', 'total_precipitation_sum', 'temperature_2m_max', 'wind_speed_10m']
+    if not set(required_columns).issubset(df.columns):
+        missing_cols = set(required_columns) - set(df.columns)
+        st.error(f"❌ 缺少所需列：{missing_cols}")
+        return
 
-        features = normalize_input(features)
-        features_tensor = torch.tensor(features[-input_seq_len:]).unsqueeze(0)  # (1, seq_len, input_size)
+    # 提取特征列（去掉日期列）
+    feature_columns = ['evaporation_from_bare_soil_sum', 'total_precipitation_sum', 'temperature_2m_max', 'wind_speed_10m']
+    features = df[feature_columns].values  # 转换为 numpy 数组
 
-        # 动态加载模型
-        model = load_model(input_size, hidden_size, num_layers)
+    # 标准化特征
+    features = normalize_input(features)
 
-        # 执行预测
-        prediction = make_forecast(model, features_tensor)
-        st.success(f"🌊 预测结果：未来 {output_seq_len} 径流量为 **{prediction[0][0]:.2f} m³/s**")
+    # 准备输入张量
+    features_tensor = torch.tensor(features[-input_seq_len:]).unsqueeze(0)  # (1, seq_len, input_size)
 
-    except Exception as e:
-        st.error(f"❌ 处理数据时出错：{e}")
+    # 动态加载模型
+    model = load_model(input_size, hidden_size, num_layers)
+
+    # 执行预测
+    prediction = make_forecast(model, features_tensor)
+    st.success(f"🌊 预测结果：未来 {output_seq_len} 月径流量为 **{prediction[0][0]:.2f} m³/s**")
+
+except Exception as e:
+    st.error(f"❌ 处理数据时出错：{e}")
 
 # 运行主模块
 if __name__ == "__main__":
