@@ -14,13 +14,16 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 class LSTMModel(nn.Module):
     def __init__(self, input_size, hidden_size, num_layers=1, output_size=1):
         super(LSTMModel, self).__init__()
-        self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True)
-        self.linear = nn.Linear(hidden_size, output_size)
+        self.lstm1 = nn.LSTM(input_size, hidden_size, batch_first=True)
+        self.lstm2 = nn.LSTM(hidden_size, hidden_size, batch_first=True)
+        self.fc = nn.Linear(hidden_size, output_size)
 
     def forward(self, x):
-        out, _ = self.lstm(x)
-        out = self.linear(out[:, -1, :])
+        out, _ = self.lstm1(x)
+        out, _ = self.lstm2(out)
+        out = self.fc(out[:, -1, :])
         return out
+
 
 # 载入模型
 @st.cache_resource
