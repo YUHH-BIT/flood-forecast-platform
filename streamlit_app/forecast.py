@@ -100,7 +100,7 @@ def run_forecast_module():
             st.error(f"❌ 缺少所需列：{missing_cols}")
             return
         
-        features = normalize_input(features)
+        features = normalize_input(required_columns)
         features_tensor = torch.tensor(features[-input_seq_len:]).unsqueeze(0)  # (1, seq_len, input_size)
 
         # 动态加载模型
