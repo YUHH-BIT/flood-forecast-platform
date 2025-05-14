@@ -1,3 +1,4 @@
+# 修改后的代码
 import streamlit as st
 import torch
 import torch.nn as nn
@@ -45,7 +46,7 @@ def make_forecast(model, input_tensor):
 # Streamlit 主界面
 def run_forecast_module():
     st.title("🌧️ 洪水预报模块")
-    st.write("上传最新气象数据（CSV），进行未来月径流预测。")
+    st.write("上传最新气象数据（Excel 或 CSV），进行未来月径流预测。")
 
     # 用户输入模型参数
     st.sidebar.header("模型参数配置")
@@ -65,20 +66,30 @@ def run_forecast_module():
     # 支持手动输入数据
     manual_input = st.checkbox("手动输入数据")
     if manual_input:
-        st.write("请手动输入数据（以逗号分隔）：")
+        st.write("请手动输入数据（以逗号或制表符分隔）：")
         raw_data = st.text_area("输入格式：evap,precip,temp,wind\n例如：1.2,3.4,5.6,7.8")
         try:
             from io import StringIO
-            df = pd.read_csv(StringIO(raw_data))
+            if ',' in raw_data:
+                df = pd.read_csv(StringIO(raw_data))
+            else:
+                df = pd.read_csv(StringIO(raw_data), sep="\t")
             st.write("✅ 数据预览：", df.head())
         except Exception as e:
             st.error(f"❌ 数据格式有误：{e}")
             return
     else:
-        uploaded_file = st.file_uploader("📤 上传 CSV 文件（需包含: evap, precip, temp, wind 列）", type=["csv"])
+        uploaded_file = st.file_uploader("📤 上传 Excel 或 CSV 文件（需包含: evap, precip, temp, wind 列）", type=["csv", "xlsx"])
         if uploaded_file:
-            df = pd.read_csv(uploaded_file)
-            st.write("✅ 数据预览：", df.head())
+            try:
+                if uploaded_file.name.endswith(".csv"):
+                    df = pd.read_csv(uploaded_file)
+                elif uploaded_file.name.endswith(".xlsx"):
+                    df = pd.read_excel(uploaded_file)
+                st.write("✅ 数据预览：", df.head())
+            except Exception as e:
+                st.error(f"❌ 文件读取失败：{e}")
+                return
         else:
             st.warning("请上传数据文件或切换到手动输入模式。")
             return
