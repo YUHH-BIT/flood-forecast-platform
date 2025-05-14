@@ -95,20 +95,16 @@ def run_forecast_module():
 
 # 数据检查和处理
 try:
+    # 修改后的必需列
     required_columns = ['date', 'evaporation_from_bare_soil_sum', 'total_precipitation_sum', 'temperature_2m_max', 'wind_speed_10m']
     if not set(required_columns).issubset(df.columns):
         missing_cols = set(required_columns) - set(df.columns)
         st.error(f"❌ 缺少所需列：{missing_cols}")
         return
 
-    # 提取特征列
-    features = df[['evaporation_from_bare_soil_sum', 'total_precipitation_sum', 'temperature_2m_max', 'wind_speed_10m']].copy()
-
-    # 标准化
     features = normalize_input(features)
+    features_tensor = torch.tensor(features[-input_seq_len:]).unsqueeze(0)  # (1, seq_len, input_size)
 
-    # 转为张量
-    features_tensor = torch.tensor(features[-input_seq_len:].values, dtype=torch.float32).unsqueeze(0)  # (1, seq_len, input_size)
 
 
         # 动态加载模型
