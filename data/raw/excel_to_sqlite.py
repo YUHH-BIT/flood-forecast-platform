@@ -78,7 +78,7 @@ def excel_to_sqlite(excel_file_path,
 
 if __name__ == "__main__":
     # 配置文件路径
-    EXCEL_FILE_PATH = 'monthly_runoff_data.xlsx'  # 替换为您的Excel文件路径
+    EXCEL_FILE_PATH = 'flood_warning.xlsx'  # 替换为您的Excel文件路径
     SQLITE_DB_PATH = 'flood_warning.db'  # 替换为您想要的SQLite数据库路径
 
     # 记录开始时间
