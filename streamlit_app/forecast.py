@@ -12,17 +12,18 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # LSTM 模型结构
 class LSTMModel(nn.Module):
-    def __init__(self, input_size, hidden_size, num_layers=1, output_size=1):
+    def __init__(self, input_size, hidden_size1=80, hidden_size2=240, output_size=1):
         super(LSTMModel, self).__init__()
-        self.lstm1 = nn.LSTM(input_size, hidden_size, batch_first=True)
-        self.lstm2 = nn.LSTM(hidden_size, hidden_size, batch_first=True)
-        self.fc = nn.Linear(hidden_size, output_size)
+        self.lstm1 = nn.LSTM(input_size, hidden_size1, batch_first=True)
+        self.lstm2 = nn.LSTM(hidden_size1, hidden_size2, batch_first=True)
+        self.fc = nn.Linear(hidden_size2, output_size)
 
     def forward(self, x):
         out, _ = self.lstm1(x)
         out, _ = self.lstm2(out)
         out = self.fc(out[:, -1, :])
         return out
+
 
 
 # 载入模型
@@ -109,7 +110,7 @@ def run_forecast_module():
         features_tensor = torch.tensor(features[-input_seq_len:].values, dtype=torch.float32).unsqueeze(0)
 
         # 动态加载模型
-        model = load_model(input_size, hidden_size=80, num_layers=1)  # 固定 hidden_size 和 num_layers
+        model = LSTMModel(input_size=input_size, hidden_size1=80, hidden_size2=240)  # 固定 hidden_size 和 num_layers
 
         # 执行预测
         prediction = make_forecast(model, features_tensor)
