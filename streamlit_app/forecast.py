@@ -115,7 +115,7 @@ def run_forecast_module():
 
         # 执行预测
         prediction = make_forecast(model, features_tensor)
-        st.success(f"🌊 预测结果：未来 {output_seq_len} 径流量为 **{prediction[0][0]:.2f} m³/s**")
+        st.success(f"🌊 预测结果：未来 {output_seq_len} 天径流量为 **{prediction[0][0]:.2f} m³/s**")
 
     except Exception as e:
         st.error(f"❌ 处理数据时出错：{e}")
