@@ -1,3 +1,4 @@
+# 修改后的代码
 import streamlit as st
 import torch
 import torch.nn as nn
@@ -10,33 +11,23 @@ import os
 MODEL_PATH = "models/best_lstm_model.pth"
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# 修正后的 LSTM 模型结构，确保与权重文件兼容
+# LSTM 模型结构
 class LSTMModel(nn.Module):
     def __init__(self, input_size, hidden_size, num_layers=1, output_size=1):
         super(LSTMModel, self).__init__()
-        self.lstm1 = nn.LSTM(input_size, hidden_size, batch_first=True)
-        self.lstm2 = nn.LSTM(hidden_size, hidden_size, batch_first=True)
-        self.fc = nn.Linear(hidden_size, output_size)
+        self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True)
+        self.linear = nn.Linear(hidden_size, output_size)
 
     def forward(self, x):
-        out, _ = self.lstm1(x)
-        out, _ = self.lstm2(out)
-        out = self.fc(out[:, -1, :])
+        out, _ = self.lstm(x)
+        out = self.linear(out[:, -1, :])
         return out
 
 # 载入模型
 @st.cache_resource
 def load_model(input_size, hidden_size, num_layers):
     model = LSTMModel(input_size=input_size, hidden_size=hidden_size, num_layers=num_layers)
-    state_dict = torch.load(MODEL_PATH, map_location=DEVICE)
-
-    # 调整键名以匹配当前模型定义
-    new_state_dict = {}
-    for key, value in state_dict.items():
-        new_key = key.replace("lstm.", "lstm1.").replace("linear.", "fc.")
-        new_state_dict[new_key] = value
-
-    model.load_state_dict(new_state_dict)
+    model.load_state_dict(torch.load(MODEL_PATH, map_location=DEVICE))
     model.to(DEVICE)
     model.eval()
     return model
@@ -68,15 +59,15 @@ def run_forecast_module():
     # 提供数据模板下载
     if st.sidebar.button("📥 下载数据模板"):
         st.sidebar.write("数据模板：")
-        st.sidebar.write("date,evaporation_from_bare_soil_sum,total_precipitation_sum,temperature_2m_max,wind_speed_10m")
-        st.sidebar.write("2025-01-01,1.2,3.4,5.6,7.8")
+        st.sidebar.write("evap,precip,temp,wind")
+        st.sidebar.write("1.2,3.4,5.6,7.8")
         st.sidebar.write("...")
 
     # 支持手动输入数据
     manual_input = st.checkbox("手动输入数据")
     if manual_input:
         st.write("请手动输入数据（以逗号或制表符分隔）：")
-        raw_data = st.text_area("输入格式：date,evaporation_from_bare_soil_sum,total_precipitation_sum,temperature_2m_max,wind_speed_10m\n例如：2025-01-01,1.2,3.4,5.6,7.8")
+        raw_data = st.text_area("输入格式：evap,precip,temp,wind\n例如：1.2,3.4,5.6,7.8")
         try:
             from io import StringIO
             if ',' in raw_data:
@@ -88,7 +79,7 @@ def run_forecast_module():
             st.error(f"❌ 数据格式有误：{e}")
             return
     else:
-        uploaded_file = st.file_uploader("📤 上传 Excel 或 CSV 文件（需包含: date, evaporation_from_bare_soil_sum, total_precipitation_sum, temperature_2m_max, wind_speed_10m 列）", type=['csv', 'xlsx'])
+        uploaded_file = st.file_uploader("📤 上传 Excel 或 CSV 文件（需包含: evap, precip, temp, wind 列）", type=["csv", "xlsx"])
         if uploaded_file:
             try:
                 if uploaded_file.name.endswith(".csv"):
@@ -105,15 +96,13 @@ def run_forecast_module():
 
     # 数据检查和处理
     try:
-        # 修改后的必需列
-        required_columns = ['date', 'evaporation_from_bare_soil_sum', 'total_precipitation_sum', 'temperature_2m_max', 'wind_speed_10m']
-        if not set(required_columns).issubset(df.columns):
-            missing_cols = set(required_columns) - set(df.columns)
-            st.error(f"❌ 缺少所需列：{missing_cols}")
+        expected_cols = {"evap", "precip", "temp", "wind"}
+        if not expected_cols.issubset(df.columns):
+            st.error(f"❌ 缺少所需列：{expected_cols - set(df.columns)}")
             return
 
         # 提取并预处理输入特征
-        features = df[required_columns[1:]].values.astype(np.float32)  # 不包括 'date' 列
+        features = df[["evap", "precip", "temp", "wind"]].values.astype(np.float32)
         if len(features) < input_seq_len:
             st.error(f"❌ 数据行数不足，至少需要 {input_seq_len} 行数据！")
             return
