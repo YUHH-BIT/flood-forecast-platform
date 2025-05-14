@@ -49,12 +49,8 @@ def run_forecast_module():
 
     # 用户输入模型参数
     st.sidebar.header("模型参数配置")
-    input_size = st.sidebar.number_input("输入特征数 (input_size)", min_value=1, value=4)
-    hidden_size = st.sidebar.number_input("隐藏层大小 (hidden_size)", min_value=1, value=64)
-    num_layers = st.sidebar.number_input("LSTM 层数 (num_layers)", min_value=1, value=1)
-    input_seq_len = st.sidebar.number_input("输入时间步长 (input_seq_len)", min_value=1, value=12)  # 默认 12 个月
-    output_seq_len = st.sidebar.number_input("输出时间步长 (output_seq_len)", min_value=1, value=1)  # 默认 1 个月
-
+  input_seq_len = st.sidebar.number_input("输入时间步长 (input_seq_len)", min_value=1, value=12)  # 默认 12 个月
+output_seq_len = st.sidebar.number_input("输出时间步长 (output_seq_len)", min_value=1, value=1)  # 默认 1 个月
     # 提供数据模板下载
     if st.sidebar.button("📥 下载数据模板"):
         st.sidebar.write("数据模板：")
