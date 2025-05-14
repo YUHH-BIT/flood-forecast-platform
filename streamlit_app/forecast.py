@@ -63,21 +63,32 @@ def run_forecast_module():
         st.sidebar.write("1.2,3.4,5.6,7.8")
         st.sidebar.write("...")
 
-    # 支持手动输入数据
-    manual_input = st.checkbox("手动输入数据")
-    if manual_input:
-        st.write("请手动输入数据（以逗号或制表符分隔）：")
-        raw_data = st.text_area("输入格式：evap,precip,temp,wind\n例如：1.2,3.4,5.6,7.8")
-        try:
-            from io import StringIO
-            if ',' in raw_data:
-                df = pd.read_csv(StringIO(raw_data))
-            else:
-                df = pd.read_csv(StringIO(raw_data), sep="\t")
-            st.write("✅ 数据预览：", df.head())
-        except Exception as e:
-            st.error(f"❌ 数据格式有误：{e}")
-            return
+# 支持手动输入数据
+manual_input = st.checkbox("手动输入数据")
+if manual_input:
+    st.write("请手动输入数据（以逗号或制表符分隔，支持日期列）：")
+    raw_data = st.text_area("输入格式：date,evap,precip,temp,wind\n例如：2000-06-01,1.2,3.4,5.6,7.8")
+    try:
+        from io import StringIO
+        # 自动检测分隔符
+        if ',' in raw_data:
+            df = pd.read_csv(StringIO(raw_data))
+        else:
+            df = pd.read_csv(StringIO(raw_data), sep="\t")
+        
+        # 检查是否包含日期列
+        if "date" in df.columns:
+            # 确保日期列可以被正确解析
+            df["date"] = pd.to_datetime(df["date"], errors="coerce")
+            if df["date"].isnull().any():
+                st.error("❌ 日期列包含无效的日期格式，请检查输入！")
+                return
+            st.write("✅ 日期已解析：", df[["date"]].head())
+        
+        st.write("✅ 数据预览：", df.head())
+    except Exception as e:
+        st.error(f"❌ 数据格式有误：{e}")
+        return
     else:
         uploaded_file = st.file_uploader("📤 上传 Excel 或 CSV 文件（需包含: evap, precip, temp, wind 列）", type=["csv", "xlsx"])
         if uploaded_file:
