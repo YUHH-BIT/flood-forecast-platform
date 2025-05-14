@@ -109,7 +109,7 @@ def run_forecast_module():
         features_tensor = torch.tensor(features[-input_seq_len:].values, dtype=torch.float32).unsqueeze(0)
 
         # 动态加载模型
-        model = load_model(input_size, hidden_size=64, num_layers=1)  # 固定 hidden_size 和 num_layers
+        model = load_model(input_size, hidden_size=80, num_layers=1)  # 固定 hidden_size 和 num_layers
 
         # 执行预测
         prediction = make_forecast(model, features_tensor)
