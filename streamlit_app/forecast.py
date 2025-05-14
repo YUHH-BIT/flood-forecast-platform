@@ -100,8 +100,10 @@ def run_forecast_module():
             st.error(f"❌ 缺少所需列：{missing_cols}")
             return
         
-        features = normalize_input(required_columns)
-        features_tensor = torch.tensor(features[-input_seq_len:]).unsqueeze(0)  # (1, seq_len, input_size)
+        feature_columns = ['evaporation_from_bare_soil_sum', 'total_precipitation_sum', 'temperature_2m_max', 'wind_speed_10m']
+        features = normalize_input(df[feature_columns])
+
+        features_tensor = torch.tensor(features[-input_seq_len:].values, dtype=torch.float32).unsqueeze(0)
 
         # 动态加载模型
         model = load_model(input_size, hidden_size=64, num_layers=1)  # 固定 hidden_size 和 num_layers
