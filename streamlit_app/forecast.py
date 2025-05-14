@@ -1,3 +1,6 @@
+以下是 `streamlit_app/forecast.py` 文件的完整代码：
+
+```python
 # 修改后的代码
 import streamlit as st
 import torch
@@ -119,3 +122,4 @@ def run_forecast_module():
 # 运行主模块
 if __name__ == "__main__":
     run_forecast_module()
+```
