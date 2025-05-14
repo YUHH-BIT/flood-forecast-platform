@@ -1,5 +1,3 @@
-# streamlit_app/forecast.py
-
 import streamlit as st
 import torch
 import torch.nn as nn
@@ -12,7 +10,7 @@ import os
 MODEL_PATH = "models/best_lstm_model.pth"
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# LSTM 模型结构（需和训练时一致）
+# LSTM 模型结构
 class LSTMModel(nn.Module):
     def __init__(self, input_size, hidden_size, num_layers=1, output_size=1):
         super(LSTMModel, self).__init__()
@@ -26,14 +24,14 @@ class LSTMModel(nn.Module):
 
 # 载入模型
 @st.cache_resource
-def load_model():
-    model = LSTMModel(input_size=4, hidden_size=64)  # 依据训练时配置修改
+def load_model(input_size, hidden_size, num_layers):
+    model = LSTMModel(input_size=input_size, hidden_size=hidden_size, num_layers=num_layers)
     model.load_state_dict(torch.load(MODEL_PATH, map_location=DEVICE))
     model.to(DEVICE)
     model.eval()
     return model
 
-# 数据标准化（如有必要可换成 MinMaxScaler 等）
+# 数据标准化
 def normalize_input(data):
     return (data - data.mean()) / (data.std() + 1e-8)
 
@@ -49,30 +47,68 @@ def run_forecast_module():
     st.title("🌧️ 洪水预报模块")
     st.write("上传最新气象数据（CSV），进行未来月径流预测。")
 
-    uploaded_file = st.file_uploader("📤 上传 CSV 文件（需包含: evap, precip, temp, wind 列）", type=["csv"])
+    # 用户输入模型参数
+    st.sidebar.header("模型参数配置")
+    input_size = st.sidebar.number_input("输入特征数 (input_size)", min_value=1, value=4)
+    hidden_size = st.sidebar.number_input("隐藏层大小 (hidden_size)", min_value=1, value=64)
+    num_layers = st.sidebar.number_input("LSTM 层数 (num_layers)", min_value=1, value=1)
+    input_seq_len = st.sidebar.number_input("输入时间步长 (input_seq_len)", min_value=1, value=12)  # 默认 12 个月
+    output_seq_len = st.sidebar.number_input("输出时间步长 (output_seq_len)", min_value=1, value=1)  # 默认 1 个月
 
-    if uploaded_file:
+    # 提供数据模板下载
+    if st.sidebar.button("📥 下载数据模板"):
+        st.sidebar.write("数据模板：")
+        st.sidebar.write("evap,precip,temp,wind")
+        st.sidebar.write("1.2,3.4,5.6,7.8")
+        st.sidebar.write("...")
+
+    # 支持手动输入数据
+    manual_input = st.checkbox("手动输入数据")
+    if manual_input:
+        st.write("请手动输入数据（以逗号分隔）：")
+        raw_data = st.text_area("输入格式：evap,precip,temp,wind\n例如：1.2,3.4,5.6,7.8")
         try:
+            from io import StringIO
+            df = pd.read_csv(StringIO(raw_data))
+            st.write("✅ 数据预览：", df.head())
+        except Exception as e:
+            st.error(f"❌ 数据格式有误：{e}")
+            return
+    else:
+        uploaded_file = st.file_uploader("📤 上传 CSV 文件（需包含: evap, precip, temp, wind 列）", type=["csv"])
+        if uploaded_file:
             df = pd.read_csv(uploaded_file)
             st.write("✅ 数据预览：", df.head())
+        else:
+            st.warning("请上传数据文件或切换到手动输入模式。")
+            return
 
-            # 检查列
-            expected_cols = {"evap", "precip", "temp", "wind"}
-            if not expected_cols.issubset(df.columns):
-                st.error(f"❌ 缺少所需列：{expected_cols - set(df.columns)}")
-                return
+    # 数据检查和处理
+    try:
+        expected_cols = {"evap", "precip", "temp", "wind"}
+        if not expected_cols.issubset(df.columns):
+            st.error(f"❌ 缺少所需列：{expected_cols - set(df.columns)}")
+            return
 
-            model = load_model()
+        # 提取并预处理输入特征
+        features = df[["evap", "precip", "temp", "wind"]].values.astype(np.float32)
+        if len(features) < input_seq_len:
+            st.error(f"❌ 数据行数不足，至少需要 {input_seq_len} 行数据！")
+            return
 
-            # 提取并预处理输入特征
-            features = df[["evap", "precip", "temp", "wind"]].values.astype(np.float32)
-            features = normalize_input(features)
-            features_tensor = torch.tensor(features).unsqueeze(0)  # (1, seq_len, 4)
+        features = normalize_input(features)
+        features_tensor = torch.tensor(features[-input_seq_len:]).unsqueeze(0)  # (1, seq_len, input_size)
 
-            # 执行预测
-            prediction = make_forecast(model, features_tensor)
-            st.success(f"🌊 预测结果：未来月径流量为 **{prediction[0][0]:.2f} m³/s**")
+        # 动态加载模型
+        model = load_model(input_size, hidden_size, num_layers)
 
-        except Exception as e:
-            st.error(f"❌ 处理文件时出错：{e}")
+        # 执行预测
+        prediction = make_forecast(model, features_tensor)
+        st.success(f"🌊 预测结果：未来 {output_seq_len} 径流量为 **{prediction[0][0]:.2f} m³/s**")
 
+    except Exception as e:
+        st.error(f"❌ 处理数据时出错：{e}")
+
+# 运行主模块
+if __name__ == "__main__":
+    run_forecast_module()
