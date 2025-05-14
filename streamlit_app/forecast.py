@@ -10,23 +10,33 @@ import os
 MODEL_PATH = "models/best_lstm_model.pth"
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# LSTM 模型结构
+# 修正后的 LSTM 模型结构，确保与权重文件兼容
 class LSTMModel(nn.Module):
     def __init__(self, input_size, hidden_size, num_layers=1, output_size=1):
         super(LSTMModel, self).__init__()
-        self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True)
-        self.linear = nn.Linear(hidden_size, output_size)
+        self.lstm1 = nn.LSTM(input_size, hidden_size, batch_first=True)
+        self.lstm2 = nn.LSTM(hidden_size, hidden_size, batch_first=True)
+        self.fc = nn.Linear(hidden_size, output_size)
 
     def forward(self, x):
-        out, _ = self.lstm(x)
-        out = self.linear(out[:, -1, :])
+        out, _ = self.lstm1(x)
+        out, _ = self.lstm2(out)
+        out = self.fc(out[:, -1, :])
         return out
 
 # 载入模型
 @st.cache_resource
 def load_model(input_size, hidden_size, num_layers):
     model = LSTMModel(input_size=input_size, hidden_size=hidden_size, num_layers=num_layers)
-    model.load_state_dict(torch.load(MODEL_PATH, map_location=DEVICE))
+    state_dict = torch.load(MODEL_PATH, map_location=DEVICE)
+
+    # 调整键名以匹配当前模型定义
+    new_state_dict = {}
+    for key, value in state_dict.items():
+        new_key = key.replace("lstm.", "lstm1.").replace("linear.", "fc.")
+        new_state_dict[new_key] = value
+
+    model.load_state_dict(new_state_dict)
     model.to(DEVICE)
     model.eval()
     return model
@@ -78,7 +88,7 @@ def run_forecast_module():
             st.error(f"❌ 数据格式有误：{e}")
             return
     else:
-        uploaded_file = st.file_uploader("📤 上传 Excel 或 CSV 文件（需包含: date, evaporation_from_bare_soil_sum, total_precipitation_sum, temperature_2m_max, wind_speed_10m 列）", type=["csv", "xlsx"])
+        uploaded_file = st.file_uploader("📤 上传 Excel 或 CSV 文件（需包含: date, evaporation_from_bare_soil_sum, total_precipitation_sum, temperature_2m_max, wind_speed_10m 列）", type=['csv', 'xlsx'])
         if uploaded_file:
             try:
                 if uploaded_file.name.endswith(".csv"):
