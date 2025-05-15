@@ -126,4 +126,5 @@ def run_forecast_module():
 
 # 运行页面
 if __name__ == "__main__":
-    run_direct_forecast()
+    run_forecast_module()
+
