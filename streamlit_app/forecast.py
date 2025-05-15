@@ -61,21 +61,28 @@ def run_forecast_module():
     df = None
 
     if manual_input:
-    text = st.text_area("输入格式：date,evaporation_from_bare_soil_sum,total_precipitation_sum,temperature_2m_max,wind_speed_10m")
-    
-    # 增加判断：非空字符串 + 非仅空格 + 行数足够再解析
-    if text.strip():
-        try:
-            df = pd.read_csv(StringIO(text)) if ',' in text else pd.read_csv(StringIO(text), sep="\t")
-            st.success("✅ 数据读取成功")
-            st.dataframe(df.head())
-        except Exception as e:
-            st.error(f"❌ 数据读取失败：{e}")
-            return
+        text = st.text_area("输入格式：date,evaporation_from_bare_soil_sum,total_precipitation_sum,temperature_2m_max,wind_speed_10m")
+        if text:
+            try:
+                df = pd.read_csv(StringIO(text)) if ',' in text else pd.read_csv(StringIO(text), sep="\t")
+                st.success("✅ 数据读取成功")
+                st.dataframe(df.head())
+            except Exception as e:
+                st.error(f"❌ 数据读取失败：{e}")
+                return
     else:
-        st.warning("请输入数据内容")
-        return
-
+        uploaded = st.file_uploader("上传 CSV 或 Excel 文件", type=["csv", "xlsx"])
+        if uploaded:
+            try:
+                df = pd.read_csv(uploaded) if uploaded.name.endswith("csv") else pd.read_excel(uploaded)
+                st.success("✅ 文件读取成功")
+                st.dataframe(df.head())
+            except Exception as e:
+                st.error(f"❌ 文件读取失败：{e}")
+                return
+        else:
+            st.warning("请上传数据文件或使用手动输入模式")
+            return
 
     # 检查数据完整性
     if not set(['date'] + DATA_COLUMNS).issubset(df.columns):
