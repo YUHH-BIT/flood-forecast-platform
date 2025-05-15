@@ -48,23 +48,13 @@ def load_model():
 
 # 标准化
 def normalize_input(data):
-    return (data - data.mean(axis=0)) / (data.std(axis=0) + 1e-8)
+    return (data - data.mean()) / (data.std() + 1e-8)
 
-# 主界面函数
+# Streamlit 主界面
 def run_forecast_module():
-    st.set_page_config(page_title="洪水预测", layout="centered")
     st.title("🌧️ 洪水预报模块")
-    st.write("上传最新气象数据（Excel 或 CSV），进行未来 7 天的径流预测。")
+    st.write("上传最新气象数据（Excel 或 CSV），进行未来月径流预测。")
 
-    with st.expander("📘 模型结构说明"):
-        st.markdown(f"""
-        - 输入特征数：{INPUT_SIZE}
-        - 历史天数：{HISTORY_DAYS} 天
-        - 预测天数：{FORECAST_DAYS} 天
-        - LSTM 层 1：隐藏单元 {best_params['hidden_size1']}
-        - LSTM 层 2：隐藏单元 {best_params['hidden_size2']}
-        - Dropout：{best_params['dropout']}
-        """)
 
     # 手动输入 or 文件上传
     manual_input = st.checkbox("手动输入数据")
@@ -110,7 +100,6 @@ def run_forecast_module():
 
     model = load_model()
     last_history = features[-HISTORY_DAYS:]
-    last_history = normalize_input(last_history)
     last_date = pd.to_datetime(dates[-1])
     predictions, pred_dates = [], []
 
@@ -120,10 +109,7 @@ def run_forecast_module():
             output = model(input_tensor)
             prediction = output.numpy()[0, -1]
             predictions.append(prediction)
-
-        # 用当前最后一行输入（标准化前的）构造新输入
-        new_input = features[-1]  # 注意这里用原始数据
-        new_input = normalize_input(pd.DataFrame([new_input], columns=DATA_COLUMNS).values)[0]  # 单行标准化
+        new_input = last_history[-1]  # 简化处理：用最后一行输入复制
         last_history = np.vstack([last_history[1:], new_input])
         pred_dates.append(last_date + timedelta(days=i+1))
 
@@ -141,3 +127,4 @@ def run_forecast_module():
 # 运行页面
 if __name__ == "__main__":
     run_forecast_module()
+
