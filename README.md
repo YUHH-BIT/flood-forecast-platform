@@ -11,9 +11,12 @@
 # ├── data/
 # │   └── processed/
 # │       └── flood_warning.db  # SQLite 数据库（用于数据查询）
+# │   └── raw/
+# │       └── flood_warning.xlsx  # 原始数据
 # │
 # ├── models/
 # │   └── best_lstm_model.pth   # 训练好的 LSTM 模型权重
+# │   └── best_params.json   # 训练好的 LSTM 模型参数
 # │
 # ├── notebooks/
 # │   └── model_training.ipynb  # 模型训练记录
