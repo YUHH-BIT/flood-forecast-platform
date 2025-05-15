@@ -133,25 +133,19 @@ def export_forecast_to_excel(df):
 # 主界面函数
 def run_forecast_module():
     st.title("🌧️ 洪水预报模块")
-    st.write("上传最新气象数据（仅支持 Excel 文件），进行未来径流预测。")
+    st.write("上传最新气象数据，进行未来径流预测。")
 
     excel_buffer = create_excel_template()
     st.download_button(
-        label="📊 下载Excel模板",
+        label="📊 下载模板",
         data=excel_buffer,
         file_name="data_template.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         help="下载Excel格式的数据模板（含填写指南）"
     )
 
-    st.info("""
-    💡 注意事项：
-    1. 请确保填写连续15天的完整数据  
-    2. 日期格式必须为YYYY-MM-DD（如2025-06-01）  
-    3. 所有数值列需填写有效数字（如2.5、10.3）  
-    """)
 
-    uploaded = st.file_uploader("📤 上传Excel文件", type=["xlsx"])
+    uploaded = st.file_uploader("📤 上传文件", type=["xlsx"])
     df = None
     if uploaded:
         try:
