@@ -4,6 +4,9 @@ import streamlit as st
 import sqlite3
 import pandas as pd
 from datetime import datetime
+from io import BytesIO
+from openpyxl import Workbook
+from openpyxl.utils.dataframe import dataframe_to_rows
 
 DB_PATH = "data/processed/flood_warning.db"
 
@@ -61,10 +64,23 @@ def run_query_module():
                 st.success(f"✅ 查询到 {len(df)} 条数据：")
                 st.dataframe(df)
 
-                csv = df.to_csv(index=False).encode('utf-8')
-                st.download_button("📥 下载结果 CSV", csv, file_name="query_result.csv", mime="text/csv")
+                # 保存为 Excel
+                output = BytesIO()
+                wb = Workbook()
+                ws = wb.active
+                ws.title = "查询结果"
+                for row in dataframe_to_rows(df, index=False, header=True):
+                    ws.append(row)
+                wb.save(output)
+                output.seek(0)
+
+                st.download_button(
+                    "📥 下载结果 Excel",
+                    data=output,
+                    file_name="query_result.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
         except Exception as e:
             st.error(f"❌ 查询失败：{e}")
         finally:
             conn.close()
-
