@@ -1,4 +1,4 @@
-# streamlit_app/direct_forecast.py
+# streamlit_app/forecast.py
 import streamlit as st
 import torch
 import torch.nn as nn
@@ -53,7 +53,7 @@ def normalize_input(data):
 # Streamlit 主界面
 def run_forecast_module():
     st.title("🌧️ 洪水预报模块")
-    st.write("上传最新气象数据（Excel 或 CSV），进行未来月径流预测。")
+    st.write("上传气象数据，进行径流预测。")
 
     # 手动输入 or 文件上传
     manual_input = st.checkbox("手动输入数据")
