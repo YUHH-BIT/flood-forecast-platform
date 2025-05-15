@@ -53,7 +53,7 @@ def normalize_input(data):
 # Streamlit 主界面
 def run_forecast_module():
     st.title("🌧️ 洪水预报模块")
-    st.write("上传最新气象数据（Excel 或 CSV），进行未来径流预测。")
+    st.write("上传最新气象数据（Excel 或 CSV），进行未来月径流预测。")
 
 
     # 手动输入 or 文件上传
@@ -85,13 +85,9 @@ def run_forecast_module():
             return
 
     # 检查数据完整性
-if df is None or not isinstance(df, pd.DataFrame):
-    st.error("❌ 数据未正确加载，请重新上传文件或检查输入格式")
-    return
-
-if not set(['date'] + DATA_COLUMNS).issubset(df.columns):
-    st.error(f"❌ 数据缺失必要列，请确保包含：date + {DATA_COLUMNS}")
-    return
+    if not set(['date'] + DATA_COLUMNS).issubset(df.columns):
+        st.error(f"❌ 数据缺失必要列，请确保包含：date + {DATA_COLUMNS}")
+        return
 
     df = df.dropna()
     df['date'] = pd.to_datetime(df['date'])
