@@ -1,3 +1,4 @@
+
 import streamlit as st
 import torch
 import torch.nn as nn
@@ -16,13 +17,15 @@ DATA_COLUMNS = ['evaporation_from_bare_soil_sum',
                 'temperature_2m_max',
                 'wind_speed_10m']
 
+HISTORY_DAYS = 15
+FORECAST_DAYS = 7
 INPUT_SIZE = len(DATA_COLUMNS)
 
 # 加载模型参数
 with open("models/best_params.json", "r") as f:
     best_params = json.load(f)
 
-# 模型定义
+# 定义模型
 class LSTMRunoffModel(nn.Module):
     def __init__(self, input_size, hidden_size1, hidden_size2, dropout=0.1):
         super().__init__()
@@ -38,6 +41,7 @@ class LSTMRunoffModel(nn.Module):
         out = self.fc(out)
         return out.squeeze(-1)
 
+# 加载模型
 @st.cache_resource
 def load_model():
     model = LSTMRunoffModel(INPUT_SIZE, best_params['hidden_size1'], best_params['hidden_size2'], best_params['dropout'])
@@ -45,38 +49,65 @@ def load_model():
     model.eval()
     return model
 
-def create_excel_template(history_days):
+# 标准化
+def normalize_input(data):
+    return (data - data.mean()) / (data.std() + 1e-8)
+
+# 生成Excel模板
+def create_excel_template():
+    # 创建工作簿和工作表
     wb = openpyxl.Workbook()
     ws_data = wb.active
     ws_data.title = "数据输入"
+    
+    # 添加第二个工作表用于说明
     ws_guide = wb.create_sheet(title="填写指南")
-
-    headers = ['date'] + DATA_COLUMNS
+    
+    # ===== 工作表1: 数据输入区域 =====
+    # 设置表头
+    headers = ['date', 'evaporation_from_bare_soil_sum', 'total_precipitation_sum', 
+               'temperature_2m_max', 'wind_speed_10m']
     ws_data.append(headers)
-
+    
+    # 设置列宽
     for col_idx, header in enumerate(headers, 1):
         col_letter = get_column_letter(col_idx)
-        ws_data.column_dimensions[col_letter].width = 22 if header != 'date' else 15
-
+        if header == 'date':
+            ws_data.column_dimensions[col_letter].width = 15  # 日期列宽
+        else:
+            ws_data.column_dimensions[col_letter].width = 22  # 数据列宽
+    
+    # 生成15行空数据（带格式和验证）
     today = datetime.now()
-    for i in range(1, history_days + 1):
+    for i in range(1, 16):
+        # 日期示例（YYYY-MM-DD格式）
         date_cell = ws_data[f'A{i+1}']
         date_cell.value = f"{(today + timedelta(days=i-1)).strftime('%Y-%m-%d')}"
         date_cell.number_format = 'yyyy-mm-dd'
+        
+        # 为数值列添加数据验证（必须为数字）
         for col_idx in range(2, 6):
-            cell = ws_data[f'{get_column_letter(col_idx)}{i+1}']
+            col_letter = get_column_letter(col_idx)
+            cell = ws_data[f'{col_letter}{i+1}']
+            
+            # 创建数据验证（只能输入数字）
             dv = DataValidation(type="decimal", operator="greaterThan", formula1="-1000")
             dv.error = '请输入有效的数值！'
             dv.errorTitle = '输入错误'
             ws_data.add_data_validation(dv)
             dv.add(cell)
-
-    ws_data[f'A{history_days + 3}'] = f"⚠️ 注意：请填写完整{history_days}天的连续数据，不可留空"
-    ws_data[f'A{history_days + 3}'].font = openpyxl.styles.Font(color="FF0000", bold=True)
-
+    
+    # 添加必填项提示
+    ws_data['A18'] = "⚠️ 注意：请填写完整15天的连续数据，不可留空"
+    ws_data['A18'].font = openpyxl.styles.Font(color="FF0000", bold=True)
+    
+    # ===== 工作表2: 填写指南 =====
     ws_guide['A1'] = "数据填写指南"
     ws_guide['A1'].font = openpyxl.styles.Font(size=16, bold=True)
-
+    
+    ws_guide['A3'] = "字段说明："
+    ws_guide['A3'].font = openpyxl.styles.Font(bold=True)
+    
     field_descriptions = {
         'date': '日期 (格式: YYYY-MM-DD，如2025-06-01)',
         'evaporation_from_bare_soil_sum': '裸土蒸发总量 (单位: mm)',
@@ -84,48 +115,83 @@ def create_excel_template(history_days):
         'temperature_2m_max': '2米高度最高温度 (单位: °C)',
         'wind_speed_10m': '10米高度风速 (单位: m/s)'
     }
-
-    row = 3
+    
+    row = 4
     for field, desc in field_descriptions.items():
         ws_guide[f'A{row}'] = field
         ws_guide[f'A{row}'].font = openpyxl.styles.Font(bold=True)
         ws_guide[f'B{row}'] = desc
         row += 1
-
-    ws_guide['A8'] = "填写要求："
-    ws_guide['A8'].font = openpyxl.styles.Font(bold=True)
-    ws_guide['B8'] = f"1. 必须提供连续{history_days}天的完整数据"
-    ws_guide['B9'] = "2. 日期需按升序排列"
-    ws_guide['B10'] = "3. 数值列不可留空，必须为数字"
-
+    
+    ws_guide['A7'] = "填写要求："
+    ws_guide['A7'].font = openpyxl.styles.Font(bold=True)
+    ws_guide['B7'] = "1. 必须提供连续15天的完整数据"
+    ws_guide['B8'] = "2. 日期需按升序排列"
+    ws_guide['B9'] = "3. 数值列不可留空，必须为数字"
+    
+    # 调整指南工作表列宽
     ws_guide.column_dimensions['A'].width = 30
     ws_guide.column_dimensions['B'].width = 60
-
+    
+    # 保存到内存流
     buffer = BytesIO()
     wb.save(buffer)
     buffer.seek(0)
+    
     return buffer
 
+# Streamlit 主界面
 def run_forecast_module():
-    st.set_page_config(page_title="洪水预报", layout="centered")
     st.title("🌧️ 洪水预报模块")
+    st.write("上传最新气象数据（Excel 或 CSV），进行未来月径流预测。")
+    
+    # 生成Excel模板
+    excel_buffer = create_excel_template()
+    
+    # 添加Excel模板下载按钮
+    st.download_button(
+        label="📊 下载Excel模板",
+        data=excel_buffer,
+        file_name="data_template.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        help="下载Excel格式的数据模板（含填写指南）"
+    )
+    
+    # 添加CSV模板下载按钮
+    csv_template = """date,evaporation_from_bare_soil_sum,total_precipitation_sum,temperature_2m_max,wind_speed_10m
+YYYY-MM-DD,,,,
+YYYY-MM-DD,,,,
+YYYY-MM-DD,,,,
+YYYY-MM-DD,,,,
+YYYY-MM-DD,,,,
+YYYY-MM-DD,,,,
+YYYY-MM-DD,,,,
+YYYY-MM-DD,,,,
+YYYY-MM-DD,,,,
+YYYY-MM-DD,,,,
+YYYY-MM-DD,,,,
+YYYY-MM-DD,,,,
+YYYY-MM-DD,,,,
+YYYY-MM-DD,,,,
+YYYY-MM-DD,,,,
+"""
+    st.download_button(
+        label="📄 下载CSV模板",
+        data=csv_template,
+        file_name="data_template.csv",
+        mime="text/csv",
+        help="下载CSV格式的数据模板"
+    )
+    
+    # 添加填写提示
+    st.info("""
+    💡 注意事项：
+    1. 请确保填写连续15天的完整数据
+    2. 日期格式必须为YYYY-MM-DD（如2025-06-01）
+    3. 所有数值列需填写有效数字（如2.5、10.3）
+    """)
 
-    st.subheader("参数设置")
-    history_days = st.slider("输入历史天数（HISTORY_DAYS）", min_value=7, max_value=30, value=15, step=1)
-    forecast_days = st.slider("预测未来天数（FORECAST_DAYS）", min_value=1, max_value=14, value=7, step=1)
-
-    excel_buffer = create_excel_template(history_days)
-
-    st.download_button("📊 下载Excel模板", data=excel_buffer,
-                       file_name="data_template.xlsx",
-                       mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-
-    csv_template = "date," + ",".join(DATA_COLUMNS) + "\n" + "\n".join(["YYYY-MM-DD,,,," for _ in range(history_days)])
-    st.download_button("📄 下载CSV模板", data=csv_template,
-                       file_name="data_template.csv", mime="text/csv")
-
-    st.info(f"""💡 请上传或输入连续 **{history_days} 天** 的数据，预测未来 **{forecast_days} 天** 的径流。""")
-
+    # 手动输入 or 文件上传
     manual_input = st.checkbox("手动输入数据")
     df = None
 
@@ -156,6 +222,7 @@ def run_forecast_module():
             st.warning("请上传数据文件")
             return
 
+    # 检查数据完整性
     if not set(['date'] + DATA_COLUMNS).issubset(df.columns):
         st.error(f"❌ 数据缺失必要列，请确保包含：date + {DATA_COLUMNS}")
         return
@@ -165,35 +232,41 @@ def run_forecast_module():
     features = df[DATA_COLUMNS].values
     dates = df['date'].values
 
-    if len(features) < history_days:
-        st.error(f"❌ 数据长度不足 {history_days} 天")
+    if len(features) < HISTORY_DAYS:
+        st.error(f"❌ 数据长度不足 {HISTORY_DAYS} 天")
         return
 
     model = load_model()
-    last_history = features[-history_days:]
+    last_history = features[-HISTORY_DAYS:]
     last_date = pd.to_datetime(dates[-1])
     predictions, pred_dates = [], []
 
-    for i in range(forecast_days):
+    for i in range(FORECAST_DAYS):
         input_tensor = torch.tensor(np.expand_dims(last_history, axis=0), dtype=torch.float32)
         with torch.no_grad():
             output = model(input_tensor)
             prediction = output.numpy()[0, -1]
             predictions.append(prediction)
-        new_input = last_history[-1]
+        new_input = last_history[-1]  # 简化处理：用最后一行输入复制
         last_history = np.vstack([last_history[1:], new_input])
         pred_dates.append(last_date + timedelta(days=i+1))
 
+    # 展示结果
     result_df = pd.DataFrame({
         'date': pred_dates,
         'predicted_runoff': predictions
     })
-
     st.success("✅ 预测完成")
-    st.subheader("预测结果")
+    
+    # 显示预测结果图表
+    st.subheader("径流预测趋势")
     st.line_chart(result_df.set_index('date'))
+    
     st.dataframe(result_df)
 
+    # 下载
     st.download_button("📥 下载预测结果", data=result_df.to_csv(index=False).encode('utf-8'), file_name="direct_forecast.csv")
 
-# 请在 app.py 中导入此函数并运行 run_forecast_module()
+# 运行页面
+if __name__ == "__main__":
+    run_forecast_module()
