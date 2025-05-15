@@ -122,7 +122,7 @@ def run_forecast_module():
     st.dataframe(result_df)
 
     # 下载
-    st.download_button("📥 下载预测结果", data=result_df.to_csv(index=False).encode('utf-8'), file_name="direct_forecast.csv")
+    st.download_button("📥 下载预测结果", data=result_df.to_xlsx(index=False).encode('utf-8'), file_name="direct_forecast.xlsx")
 
 # 运行页面
 if __name__ == "__main__":
