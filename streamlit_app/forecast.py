@@ -200,7 +200,7 @@ def run_forecast_module():
 
     excel_result = export_forecast_to_excel(result_df)
     st.download_button(
-        label="📥 下载预测结果 (Excel)",
+        label="📥 下载预测结果",
         data=excel_result,
         file_name="direct_forecast.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
