@@ -1,4 +1,4 @@
-# streamlit_app/forecast.py
+# streamlit_app/direct_forecast.py
 import streamlit as st
 import torch
 import torch.nn as nn
@@ -7,7 +7,6 @@ import numpy as np
 import json
 from datetime import timedelta
 from io import StringIO
-from io import BytesIO 
 
 # 参数配置
 DATA_COLUMNS = ['evaporation_from_bare_soil_sum',
@@ -115,26 +114,15 @@ def run_forecast_module():
         pred_dates.append(last_date + timedelta(days=i+1))
 
     # 展示结果
-result_df = pd.DataFrame({
-    'date': pred_dates,
-    'predicted_runoff': predictions
-})
-st.success("✅ 预测完成")
-st.dataframe(result_df)
+    result_df = pd.DataFrame({
+        'date': pred_dates,
+        'predicted_runoff': predictions
+    })
+    st.success("✅ 预测完成")
+    st.dataframe(result_df)
 
-# 生成 Excel 文件
-output = BytesIO()
-with pd.ExcelWriter(output, engine='openpyxl') as writer:
-    result_df.to_excel(writer, index=False, sheet_name='Forecast')  # 写入 Excel
-output.seek(0)  # 重置指针
-
-# 下载按钮 (Excel 格式)
-st.download_button(
-    "📥 下载预测结果 (Excel)",
-    data=output,
-    file_name="direct_forecast.xlsx",
-    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-)ast.csv")
+    # 下载
+    st.download_button("📥 下载预测结果", data=result_df.to_csv(index=False).encode('utf-8'), file_name="direct_forecast.csv")
 
 # 运行页面
 if __name__ == "__main__":
