@@ -12,7 +12,7 @@ DB_PATH = "data/processed/flood_warning.db"
 
 def run_query_module():
     st.title("🗃️ 数据查询模块")
-    st.write("请选择数据表并输入查询日期（支持年、年月、年月日）以查看历史观测数据。")
+    st.write("请选择数据表并输入查询日期")
 
     # 建立数据库连接并获取表名
     try:
@@ -75,7 +75,7 @@ def run_query_module():
                 output.seek(0)
 
                 st.download_button(
-                    "📥 下载结果 Excel",
+                    "📥 下载结果",
                     data=output,
                     file_name="query_result.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
