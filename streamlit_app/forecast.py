@@ -55,7 +55,6 @@ def run_forecast_module():
     st.title("🌧️ 洪水预报模块")
     st.write("上传最新气象数据（Excel 或 CSV），进行未来月径流预测。")
 
-
     # 手动输入 or 文件上传
     manual_input = st.checkbox("手动输入数据")
     df = None
@@ -70,6 +69,9 @@ def run_forecast_module():
             except Exception as e:
                 st.error(f"❌ 数据读取失败：{e}")
                 return
+        else:
+            st.warning("请输入数据")  # 新增提示
+            return  # 直接返回，避免后续处理
     else:
         uploaded = st.file_uploader("上传 CSV 或 Excel 文件", type=["csv", "xlsx"])
         if uploaded:
@@ -81,14 +83,20 @@ def run_forecast_module():
                 st.error(f"❌ 文件读取失败：{e}")
                 return
         else:
-            st.warning("请上传数据文件或使用手动输入模式")
-            return
+            st.warning("请上传数据文件")  # 新增提示
+            return  # 直接返回，避免后续处理
+
+    # 确保 df 不为 None 且已正确加载
+    if df is None or df.empty:
+        st.error("❌ 未检测到有效数据")
+        return
 
     # 检查数据完整性
     if not set(['date'] + DATA_COLUMNS).issubset(df.columns):
         st.error(f"❌ 数据缺失必要列，请确保包含：date + {DATA_COLUMNS}")
         return
 
+    # 后续代码保持不变...
     df = df.dropna()
     df['date'] = pd.to_datetime(df['date'])
     features = df[DATA_COLUMNS].values
