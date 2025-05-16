@@ -1,5 +1,5 @@
 # 项目结构说明（Streamlit 版本）
-# flood-forecast-platform/
+# Croy-floods/
 # ├── streamlit_app/
 # │   ├── app.py                # ✅ Streamlit 主入口（使用 streamlit run 运行）
 # │   ├── forecast.py           # 洪水预报模块
